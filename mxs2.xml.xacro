@@ -1,0 +1,425 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://jsbsim.sourceforge.net/JSBSim.xsl"?>
+<fdm_config name="MXS2" version="2.0"
+  xmlns:xacro="http://www.ros.org/wiki/xacro"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="http://jsbsim.sourceforge.net/JSBSim.xsd"
+  release="BETA"
+>
+
+    <metrics>
+        <wingarea unit="M2">0.263</wingarea>
+        <wingspan unit="M">1.09</wingspan>
+        <chord unit="M">0.24</chord>
+        <htailarea unit="M2">0.0825</htailarea>
+        <htailarm unit="M">0.585</htailarm>
+        <vtailarea unit="M2"> 0.04 </vtailarea>
+        <vtailarm unit="M"> 0.585 </vtailarm>
+    </metrics>
+    
+    <mass_balance>
+        <ixx unit="KG*M2">0.1</ixx>
+        <iyy unit="KG*M2">0.1</iyy>
+        <izz unit="KG*M2">0.1</izz>
+        <ixy unit="KG*M2">0</ixy>
+        <ixz unit="KG*M2">0</ixz>
+        <iyz unit="KG*M2">0</iyz>
+        <emptywt unit="KG">2</emptywt>
+        <location name="CG" unit="M">
+            <x>0</x>
+            <y>0</y>
+            <z>0</z>
+        </location>
+    </mass_balance>
+    
+    <ground_reactions>
+        <contact type="STRUCTURE" name="INTAKE">
+            <location unit="M">
+                <x>0</x>
+                <y>0</y>
+                <z>-0.15</z>
+            </location>
+            <static_friction> 0.2 </static_friction>
+            <dynamic_friction> 0.2 </dynamic_friction>
+            <rolling_friction> 0.2 </rolling_friction>
+            <spring_coeff unit="LBS/FT"> 10000 </spring_coeff>
+            <damping_coeff unit="LBS/FT/SEC"> 2000 </damping_coeff>
+        </contact>
+    </ground_reactions>
+    
+    <propulsion>
+    </propulsion>
+    
+    <aerodynamics>
+        
+        <xacro:macro name="heavislide" params="*x *p *k">
+            <quotient>
+                <v>1</v>
+                <sum>
+                    <v>1</v>
+                    <exp>
+                        <product>
+                            <product>
+                                <v>-2</v>
+                                <xacro:insert_block name="k"/>
+                            </product>
+                            <difference>
+                                <xacro:insert_block name="x"/>
+                                <xacro:insert_block name="p"/>
+                            </difference>
+                        </product>
+                    </exp>
+                </sum>
+            </quotient>
+        </xacro:macro>
+    
+        <xacro:macro name="heavisentre" params="*x *l *h *k">
+            <product>
+                <xacro:heavislide>
+                    <xacro:insert_block name="x" />
+                    <xacro:insert_block name="l" />
+                    <xacro:insert_block name="k" />
+                </xacro:heavislide>
+                <difference>
+                    <v>1</v>
+                    <xacro:heavislide>
+                        <xacro:insert_block name="x" />
+                        <xacro:insert_block name="h" />
+                        <xacro:insert_block name="k" />
+                    </xacro:heavislide>
+                </difference>
+            </product>
+        </xacro:macro>
+        
+        <xacro:macro name="deg2rad" params="*x">
+            <product>
+                <quotient>
+                    <xacro:insert_block name="x" />
+                    <v>180.0</v>
+                </quotient>
+                <pi/>
+            </product>
+        </xacro:macro>
+    
+        <xacro:macro name="ft2m" params="*x">
+            <!-- ft to m conversion -->
+            <product>
+                <xacro:insert_block name="x" />
+                <v>0.3048</v>
+            </product>
+        </xacro:macro>
+
+        <xacro:macro name="ft22m2" params="*x">
+            <!-- ft^2 to m^2 conversion -->
+            <product>
+                <xacro:insert_block name="x" />
+                <v>0.092903</v>
+            </product>
+        </xacro:macro>
+
+        <xacro:macro name="psf2pa" params="*x">
+            <!-- lb/ft^2 to Pa conversion -->
+            <product>
+                <xacro:insert_block name="x" />
+                <v>47.8802</v>
+            </product>
+        </xacro:macro>
+        
+        <xacro:macro name="n2lbf" params="*x">
+            <!-- N to lbf conversion -->
+            <product>
+                <xacro:insert_block name="x" />
+                <v>0.2248089431</v>
+            </product>
+        </xacro:macro>
+
+        <xacro:macro name="nm2ftlbf" params="*x">
+            <!-- Nm to ft-lbf conversion -->
+            <product>
+                <xacro:insert_block name="x" />
+                <v>0.737562</v>
+            </product>
+        </xacro:macro>
+
+        <function name="metrics/Sw-sqm">
+            <xacro:ft22m2>
+                <property>metrics/Sw-sqft</property>
+            </xacro:ft22m2>
+        </function>
+
+        <function name="metrics/cbarw-m">
+            <xacro:ft2m>
+                <property>metrics/cbarw-ft</property>
+            </xacro:ft2m>
+        </function>
+        
+        <function name="metrics/xt-m">
+            <product>
+                <v>-1</v>
+                <xacro:ft2m>
+                    <property>metrics/lh-ft</property>
+                </xacro:ft2m>
+            </product>
+        </function>
+
+        <function name="aero/qbar-pa">
+            <xacro:psf2pa>
+                <property>aero/qbar-psf</property>
+            </xacro:psf2pa>
+        </function>
+    
+        <function name="aero/function/c_l_alpha">
+            <description></description>
+            <product>
+                <xacro:heavisentre>
+                    <property>aero/alpha-rad</property>
+                    <v>-0.34</v><!-- alpha_nstall -->
+                    <v>0.2719</v><!-- alpha_pstall -->
+                    <v>10</v>
+                </xacro:heavisentre>
+                <sum>
+                    <v>0.1615</v><!-- C_l_0 -->
+                    <product>
+                        <v>5.2212</v><!-- C_l_alpha -->
+                        <property>aero/alpha-rad</property>
+                    </product>
+                </sum>
+            </product>
+        </function>
+            
+        <function name="aero/function/c_d_alpha">
+            <description></description>
+            <sum>
+                <product>
+                    <xacro:heavisentre>
+                        <property>aero/alpha-rad</property>
+                        <xacro:deg2rad><v>-30</v></xacro:deg2rad><!-- -alpha_lim -->
+                        <xacro:deg2rad><v>30</v></xacro:deg2rad><!-- alpha_lim -->
+                        <v>10</v>
+                    </xacro:heavisentre>
+                    <sum>
+                        <product>
+                            <v>2.3814</v><!-- C_D_alpha -->
+                            <pow>
+                                <difference>
+                                    <property>aero/alpha-rad</property>
+                                    <v>0.0207</v><!-- alpha_C_D_0 -->
+                                </difference>
+                                <v>2</v>
+                            </pow>
+                        </product>
+                        <v>0.0671</v><!-- C_D_0 -->
+                    </sum>
+                </product>
+                <product>
+                    <v>2</v>
+                    <difference>
+                        <v>1</v>
+                        <xacro:heavisentre>
+                            <property>aero/alpha-rad</property>
+                            <xacro:deg2rad><v>-30</v></xacro:deg2rad><!-- -alpha_lim -->
+                            <xacro:deg2rad><v>30</v></xacro:deg2rad><!-- alpha_lim -->
+                            <v>10</v>
+                    </xacro:heavisentre>
+                    </difference>
+                </product>
+            </sum>
+        </function>
+        
+        <axis name="X">
+            <function>
+                <xacro:n2lbf>
+                    <product>
+                        <v>-1</v>
+                        <property>aero/qbar-pa</property>
+                        <property>metrics/Sw-sqm</property>
+                        <property>aero/function/c_d_alpha</property>
+                    </product>
+                </xacro:n2lbf>
+            </function>
+        </axis>
+        
+        <axis name="Y">
+            <function>
+                <xacro:n2lbf>
+                    <v>0</v>
+                </xacro:n2lbf>
+            </function>
+        </axis>
+    
+        <axis name="Z">
+            <function>
+                <xacro:n2lbf>
+                    <product>
+                        <v>-1</v>
+                        <property>aero/qbar-pa</property>
+                        <property>metrics/Sw-sqm</property>
+                        <property>aero/function/c_l_alpha</property>
+                    </product>
+                </xacro:n2lbf>
+            </function>
+        </axis>
+
+
+        <function name="aero/function/c_m_alpha">
+            <description></description>
+            <sum>
+                <product>
+                    <xacro:heavisentre>
+                        <property>aero/alpha-rad</property>
+                        <xacro:deg2rad><v>-15</v></xacro:deg2rad><!-- -alpha_lim -->
+                        <xacro:deg2rad><v>15</v></xacro:deg2rad><!-- alpha_lim -->
+                        <v>12</v>
+                    </xacro:heavisentre>
+                    <sum>
+                        <product>
+                            <v>-0.5462</v><!-- v -->
+                            <tan>
+                                <product>
+                                    <v>1.4151</v><!-- h -->
+                                    <difference>
+                                        <property>aero/alpha-rad</property>
+                                        <v>0.0484</v><!-- alpha_c_M_0 -->
+                                    </difference>
+                                </product>
+                            </tan>
+                        </product>
+                        <v>0.053</v><!-- C_M_0 -->
+                    </sum>
+                </product>
+                <product>
+                    <v>0.5</v>
+                    <difference>
+                        <v>1</v>
+                        <xacro:heavislide>
+                            <property>aero/alpha-rad</property>
+                            <xacro:deg2rad><v>-15</v></xacro:deg2rad><!-- -alpha_lim -->
+                            <v>12</v>
+                        </xacro:heavislide>
+                    </difference>
+                </product>
+                <product>
+                    <v>-0.5</v>
+                    <xacro:heavislide>
+                        <property>aero/alpha-rad</property>
+                        <xacro:deg2rad><v>15</v></xacro:deg2rad><!-- alpha_lim -->
+                        <v>12</v>
+                    </xacro:heavislide>
+                </product>
+            </sum>
+        </function>
+
+        <xacro:macro name="c_lta" params="*a">
+            <sum>
+                <product>
+                    <v>3.5810</v>
+                    <xacro:heavisentre>
+                        <xacro:insert_block name="a"/>
+                        <v>-0.1745</v>
+                        <v>0.1745</v>
+                        <v>10</v>
+                    </xacro:heavisentre>
+                    <xacro:insert_block name="a"/>
+                </product>
+                <product>
+                    <v>0.65</v>
+                    <xacro:heavislide>
+                        <xacro:insert_block name="a"/>
+                        <v>0.1745</v>
+                        <v>10</v>
+                    </xacro:heavislide>
+                </product>
+                <product>
+                    <v>-0.65</v>
+                    <difference>
+                        <v>1</v>
+                        <xacro:heavislide>
+                            <xacro:insert_block name="a"/>
+                            <v>-0.1745</v>
+                            <v>10</v>
+                        </xacro:heavislide>
+                    </difference>
+                </product>
+            </sum>
+        </xacro:macro>
+        
+        <function name="aero/function/alpha_q-rad">
+            <atan>
+                <quotient>
+                    <difference>
+                        <product>
+                            <xacro:ft2m>
+                                <property>velocities/vt-fps</property>
+                            </xacro:ft2m>
+                            <sin><property>aero/alpha-rad</property></sin>
+                        </product>
+                        <product>
+                            <property>velocities/q-rad_sec</property>
+                            <property>metrics/xt-m</property>
+                        </product>
+                    </difference>
+                    <product>
+                        <xacro:ft2m>
+                            <property>velocities/vt-fps</property>
+                        </xacro:ft2m>
+                        <cos><property>aero/alpha-rad</property></cos>
+                    </product>
+                </quotient>
+            </atan>
+        </function>
+        
+        <!-- <function name="aero/function/m_t_aq">
+        </function> -->
+        
+        <axis name="ROLL">
+            <function>
+                <xacro:nm2ftlbf>
+                    <v>0</v>
+                </xacro:nm2ftlbf>
+            </function>
+        </axis>
+
+        <axis name="PITCH">
+            <function>
+                <xacro:nm2ftlbf>
+                    <product>
+                        <property>aero/qbar-pa</property>
+                        <property>metrics/Sw-sqm</property>
+                        <property>metrics/cbarw-m</property>
+                        <property>aero/function/c_m_alpha</property>
+                    </product>
+                </xacro:nm2ftlbf>
+            </function>
+            <function name="aero/m_t_aq">
+                <xacro:nm2ftlbf>
+                    <product>
+                        <property>metrics/xt-m</property>
+                        <property>aero/qbar-pa</property>
+                        <xacro:ft22m2>
+                            <property>metrics/Sh-sqft</property>
+                        </xacro:ft22m2>
+                        <difference>
+                            <xacro:c_lta>
+                                <property>aero/function/alpha_q-rad</property>
+                            </xacro:c_lta>
+                            <xacro:c_lta>
+                                <property>aero/alpha-rad</property>
+                            </xacro:c_lta>
+                        </difference>
+                    </product>
+                </xacro:nm2ftlbf>
+            </function>
+        </axis>
+
+        <axis name="YAW">
+            <function>
+                <xacro:nm2ftlbf>
+                    <v>0</v>
+                </xacro:nm2ftlbf>
+            </function>
+        </axis>
+
+        
+    </aerodynamics>
+
+</fdm_config>
